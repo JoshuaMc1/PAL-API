@@ -27,12 +27,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/recommendations', 'showRecommendations');
         Route::get('/highest', 'showHighestRating');
         Route::post('/create', 'create');
+        Route::put('/anime', "update");
+        Route::get('/anime/{slug}', 'showAnime');
+        Route::get('/anime/{anime}/get', 'getAnime');
     });
 
     Route::controller(AuthController::class)->group(function () {
         Route::get('/user', 'getUser');
         Route::delete('/logout', 'logout');
-        Route::delete('/account', 'deleteUser');
         Route::put('/profile', 'updateUserInfo');
         Route::post('/image', 'updateProfilePhoto');
         Route::put('/change', 'changePassword');

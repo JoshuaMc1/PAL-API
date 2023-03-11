@@ -25,8 +25,12 @@ class AniListController extends Controller
                 ->get();
 
             foreach ($latestAniLists as $value) {
-                $newArray = json_decode($value['anime']['anime'], true);
-                array_push($responseList, $newArray);
+                $newAniList = [
+                    "anime_id" => $value['anime_id'],
+                    "slug" => $value['anime']['slug'],
+                    "data" => json_decode($value['anime']['anime'], true)
+                ];
+                array_push($responseList, $newAniList);
             }
 
             $response = [
@@ -35,6 +39,75 @@ class AniListController extends Controller
             ];
 
             return response()->json($response);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    public function showAnime(Request $request, $slug)
+    {
+        try {
+            $user = $request->user();
+
+            $anime = Anime::where("slug", $slug)->first();
+
+            if (!$anime) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "Al parecer ese anime no existe."
+                ]);
+            }
+
+            $aniList = AniList::where("user_id", $user->id)
+                ->where("anime_id", $anime->id)
+                ->with("anime")
+                ->first();
+
+            $characters = FavoriteCharacter::where("list_id", $aniList->id)
+                ->first();
+
+            $animeResponse = json_decode($aniList['anime']['anime'], true);
+            $responseCharacters = json_decode($characters["characters"], true);
+
+            unset($aniList['anime'], $aniList['updated_at'], $aniList['user_id'], $aniList['id'], $aniList['status']);
+
+            $aniList['anime'] = $animeResponse;
+            $aniList['characters'] = $responseCharacters;
+
+            return response()->json([
+                "success" => true,
+                "data" =>  $aniList,
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAnime($slug)
+    {
+        try {
+            $anime = Anime::where("slug", $slug)->first();
+
+            if (!$anime) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "Al parecer ese anime no existe."
+                ]);
+            }
+
+            $responseAnime = json_decode($anime['anime'], true);
+            $responseAnime['slug'] = $anime['slug'];
+
+            return response()->json([
+                "success" => true,
+                "data" =>  $responseAnime,
+            ]);
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
@@ -57,8 +130,12 @@ class AniListController extends Controller
                 ->get();
 
             foreach ($latestAniLists as $value) {
-                $newArray = json_decode($value['anime']['anime'], true);
-                array_push($responseAniList, $newArray);
+                $newAniList = [
+                    "anime_id" => $value['anime_id'],
+                    "slug" => $value['anime']['slug'],
+                    "data" => json_decode($value['anime']['anime'], true)
+                ];
+                array_push($responseAniList, $newAniList);
             }
 
             return response()->json([
@@ -91,6 +168,7 @@ class AniListController extends Controller
                 $newAniList = [
                     "anime_id" => $value['anime_id'],
                     "total_rating" => $value['total_rating'],
+                    "slug" => $value['anime']['slug'],
                     "data" => json_decode($value['anime']['anime'], true)
                 ];
                 array_push($responseRecommendations, $newAniList);
@@ -131,7 +209,8 @@ class AniListController extends Controller
                 $newAniList = [
                     "anime_id" => $value['anime_id'],
                     "total_rating" => $value['total_rating'],
-                    "data" => json_decode($value['anime']['anime'], true)
+                    "slug" => $value['anime']['slug'],
+                    "data" => json_decode($value['anime']['anime'], true),
                 ];
                 array_push($responseHighest, $newAniList);
             }
@@ -170,8 +249,9 @@ class AniListController extends Controller
             }
 
             if (!Anime::where('id', '=', $anime['mal_id'])->exists()) {
-                Anime::create([
+                $saveAnime = Anime::create([
                     'id' => $anime['mal_id'],
+                    'slug' => str_replace(' ', '-', strtolower($anime['title'])),
                     'anime' => json_encode($anime),
                 ]);
             }
@@ -197,13 +277,71 @@ class AniListController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'El anime se a añadido correctamente...'
+                    'message' => 'El anime se a añadido correctamente...',
+                    'slug' => $saveAnime['slug']
                 ]);
             }
 
             return response()->json([
                 'success' => false,
                 'message' => 'Al parecer a ocurrido un error...'
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    public function update(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $user = $request->user();
+
+            $characters = $data['characters'];
+            $general = $data['general'];
+            $anime = $data['anime'];
+
+            $aniList = AniList::where('user_id', $user->id)
+                ->where("anime_id", $anime['mal_id'])
+                ->with("anime")
+                ->first();
+
+            if (!$aniList) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para actualizar este registro...'
+                ]);
+            }
+
+            $aniList->overall_rating = $general['overall_rating'];
+            $aniList->animation_rating = $general['animation_rating'];
+            $aniList->history_rating = $general['history_rating'];
+            $aniList->characters_rating = $general['characters_rating'];
+            $aniList->music_rating = $general['music_rating'];
+            $aniList->the_good = $general['the_good'];
+            $aniList->the_bad = $general['the_bad'];
+            $aniList->currently = $general['currently'];
+            $aniList->save();
+
+            $favoriteCharacters = FavoriteCharacter::where('list_id', $aniList->id)->first();
+
+            if (!$favoriteCharacters) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Al parecer a ocurrido un error al obtener los personajes favoritos...'
+                ]);
+            }
+
+            $favoriteCharacters->characters = json_encode($characters);
+            $favoriteCharacters->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'El anime se ha actualizado correctamente...',
+                'slug' => $aniList['anime']['slug'],
             ]);
         } catch (\Throwable $th) {
             return response()->json([

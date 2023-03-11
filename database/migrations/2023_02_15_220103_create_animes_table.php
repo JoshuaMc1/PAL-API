@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('animes', function (Blueprint $table) {
             $table->unsignedBigInteger('id')->primary();
+            $table->text('slug');
             $table->json('anime');
             $table->timestamps();
         });

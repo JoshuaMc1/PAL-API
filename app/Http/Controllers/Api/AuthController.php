@@ -288,7 +288,7 @@ class AuthController extends Controller
             $user = $request->user();
             $user->photo_url = null;
             if ($user->photo) {
-                $user->photo_url = "http://personalanilist_api.test" . Storage::url($user->photo);
+                $user->photo_url = url(Storage::url($user->photo));
             }
 
             return response()->json([
