@@ -39,7 +39,7 @@ class AuthController extends Controller
 
             $response = [
                 'success' => true,
-                'token' => $user->createToken('login', ['*'], now()->addDays(31))->plainTextToken,
+                'token' => $user->createToken('login', ['*'], now()->addDays(15))->plainTextToken,
                 'message' => 'Inicio sesión correctamente.'
             ];
 
@@ -79,7 +79,7 @@ class AuthController extends Controller
 
             $response = [
                 'success' => true,
-                'token' => $user->createToken('register', ['*'], now()->addDays(31))->plainTextToken,
+                'token' => $user->createToken('register', ['*'], now()->addDays(15))->plainTextToken,
                 'message' => 'Usuario registrado con éxito.'
             ];
 
@@ -215,7 +215,7 @@ class AuthController extends Controller
             if ($request->file('photo')) {
                 Storage::makeDirectory('public/profile');
 
-                $url = Storage::put('public/profile', $request->file('photo'));
+                $url = Storage::put('public/profile/' . uniqid(), $request->file('photo'));
 
                 $previousPhotoUrl = $user->photo;
 

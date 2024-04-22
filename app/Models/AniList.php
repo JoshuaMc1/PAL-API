@@ -20,7 +20,8 @@ class AniList extends Model
         'the_good',
         'the_bad',
         'user_id',
-        'anime_id'
+        'anime_id',
+        'status'
     ];
 
     public function user()

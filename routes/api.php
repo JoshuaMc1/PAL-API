@@ -30,6 +30,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/anime', "update");
         Route::get('/anime/{slug}', 'showAnime');
         Route::get('/anime/{anime}/get', 'getAnime');
+        Route::delete('/anime', 'deleteAnime');
     });
 
     Route::controller(AuthController::class)->group(function () {
